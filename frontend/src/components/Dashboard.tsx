@@ -24,6 +24,7 @@ export default function Dashboard() {
     { title: '耗时', key: 'duration', render: (_: any, r: Task) => r.duration ? `${(r.duration / 1000).toFixed(1)}s` : '-' },
     { title: '操作', key: 'actions', render: (_: any, r: Task) => (
       <Space>
+        {r.status === 'success' && <Button size="small" type="primary" ghost onClick={() => store.replayTask(r.id)}>回放</Button>}
         {r.status === 'failed' && <Button size="small" type="primary" onClick={() => store.retryTask(r.id)}>重试</Button>}
         {r.status === 'running' && <Button size="small" danger onClick={() => store.cancelTask(r.id)}>取消</Button>}
         <Button size="small" onClick={() => { store.selectTask(r); setDrawerOpen(true) }}>详情</Button>
@@ -118,7 +119,12 @@ export default function Dashboard() {
         ]} />
 
         {/* Task Detail Drawer */}
-        <Drawer title="任务详情" open={drawerOpen} onClose={() => setDrawerOpen(false)} width={480}>
+        <Drawer title="任务详情" open={drawerOpen} onClose={() => setDrawerOpen(false)} width={480}
+          extra={store.selectedTask?.status === 'success' ? (
+            <Button type="primary" ghost onClick={() => { store.replayTask(store.selectedTask!.id); setDrawerOpen(false) }}>
+              回放任务
+            </Button>
+          ) : null}>
           {store.selectedTask && (
             <>
               <Descriptions column={1} bordered size="small">

@@ -20,6 +20,8 @@ defmodule Scheduler.TaskManager do
 
   def cancel_task(id), do: GenServer.call(__MODULE__, {:cancel_task, id})
 
+  def replay_task(id), do: GenServer.call(__MODULE__, {:replay_task, id})
+
   def get_stats, do: GenServer.call(__MODULE__, :get_stats)
 
   # Server callbacks
@@ -80,6 +82,27 @@ defmodule Scheduler.TaskManager do
       t -> t
     end)
     {:reply, :ok, %{state | tasks: tasks}}
+  end
+
+  @impl true
+  def handle_call({:replay_task, id}, _from, state) do
+    case Enum.find(state.tasks, &(&1.id == id and &1.status == :success)) do
+      nil ->
+        {:reply, {:error, :task_not_found_or_not_success}, state}
+      source_task ->
+        counter = state.counter + 1
+        new_task = %Task{
+          id: "task-#{counter}",
+          name: source_task.name,
+          status: :pending,
+          node: source_task.node,
+          created_at: DateTime.utc_now(),
+          retries: 0,
+          max_retries: source_task.max_retries,
+          logs: ["[INFO] Task #{source_task.name} replayed from #{source_task.id}"]
+        }
+        {:reply, {:ok, new_task}, %{state | tasks: [new_task | state.tasks], counter: counter}}
+    end
   end
 
   @impl true

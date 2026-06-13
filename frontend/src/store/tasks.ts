@@ -47,6 +47,7 @@ interface TaskStore {
   addTask: (name: string) => void
   retryTask: (id: string) => void
   cancelTask: (id: string) => void
+  replayTask: (id: string) => void
   selectTask: (t: Task | null) => void
   refreshNodes: () => void
   addMetric: () => void
@@ -79,6 +80,21 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   cancelTask: (id) => set({
     tasks: get().tasks.map(t => t.id === id ? { ...t, status: 'failed' as TaskStatus, logs: [...t.logs, '[WARN] Cancelled by user'] } : t)
   }),
+  replayTask: (id) => {
+    const source = get().tasks.find(t => t.id === id && t.status === 'success')
+    if (!source) return
+    const newTask: Task = {
+      id: `task-${Date.now()}`,
+      name: source.name,
+      status: 'pending',
+      node: source.node,
+      createdAt: Date.now(),
+      retries: 0,
+      maxRetries: source.maxRetries,
+      logs: [`[INFO] Task ${source.name} replayed from ${source.id}`],
+    }
+    set({ tasks: [newTask, ...get().tasks] })
+  },
   selectTask: (t) => set({ selectedTask: t }),
   refreshNodes: () => set({ nodes: mockNodes() }),
   addMetric: () => {
